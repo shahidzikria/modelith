@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.vite/
+*.log
+__pycache__/
+.pytest_cache/
+tests/generated/
+*.onnx
+checkpoints/
+.venv/
+playwright-report/
+test-results/
