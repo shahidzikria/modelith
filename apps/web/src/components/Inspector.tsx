@@ -1,4 +1,4 @@
-import type { Analysis } from '@netloom/blocks';
+import type { Analysis } from '@modelith/blocks';
 import * as Tabs from '@radix-ui/react-tabs';
 import { lazy, Suspense } from 'react';
 import { useStore, type InspectorTab } from '../store';

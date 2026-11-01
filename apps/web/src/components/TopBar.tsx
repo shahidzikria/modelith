@@ -1,4 +1,4 @@
-import type { Analysis, Project } from '@netloom/blocks';
+import type { Analysis, Project } from '@modelith/blocks';
 import { useStore as useZustand } from 'zustand';
 import { autoLayout } from '../layout';
 import { redo, undo, useStore, type Theme } from '../store';
@@ -37,18 +37,18 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
 
   const exportProject = () => {
     const p = useStore.getState().project;
-    download(new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }), `${p.name.replace(/\W+/g, '_')}.netloom.json`);
+    download(new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }), `${p.name.replace(/\W+/g, '_')}.modelith.json`);
   };
   const importProject = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json,.netloom.json,application/json';
+    input.accept = '.json,.modelith.json,application/json';
     input.onchange = async () => {
       const f = input.files?.[0];
       if (!f) return;
       try {
         const p = JSON.parse(await f.text()) as Project;
-        if (p.version !== 2 || !Array.isArray(p.nodes)) throw new Error('not a Netloom v2 project');
+        if (p.version !== 2 || !Array.isArray(p.nodes)) throw new Error('not a Modelith v2 project');
         setProject(p);
         toast(`Imported ${p.name}`, 'success');
       } catch (e) {
@@ -65,7 +65,7 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
       </button>
       <div className="flex shrink-0 items-center gap-2">
         <img src="/favicon.svg" alt="" className="h-6 w-6" />
-        <span className="hidden font-semibold sm:inline">Netloom</span>
+        <span className="hidden font-semibold sm:inline">Modelith</span>
       </div>
       <label htmlFor="project-name" className="sr-only">
         Project name
@@ -80,10 +80,10 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
         <Btn label="Templates" onClick={() => setShowGallery(true)}>
           Templates
         </Btn>
-        <Btn label="Import .netloom.json" onClick={importProject}>
+        <Btn label="Import .modelith.json" onClick={importProject}>
           Import
         </Btn>
-        <Btn label="Export .netloom.json" onClick={exportProject}>
+        <Btn label="Export .modelith.json" onClick={exportProject}>
           Export
         </Btn>
       </div>

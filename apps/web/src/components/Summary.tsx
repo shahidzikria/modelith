@@ -1,4 +1,4 @@
-import { formatCount, formatShape, getBlock, trainingMemoryBytes, type Analysis } from '@netloom/blocks';
+import { formatCount, formatShape, getBlock, trainingMemoryBytes, type Analysis } from '@modelith/blocks';
 import { useState } from 'react';
 import { useStore } from '../store';
 import { Verify } from './Verify';

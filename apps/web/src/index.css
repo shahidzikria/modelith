@@ -144,7 +144,7 @@ button:disabled {
   font-size: 10px;
 }
 
-.netloom-code-highlight {
+.modelith-code-highlight {
   background: color-mix(in srgb, var(--accent) 18%, transparent);
 }
 

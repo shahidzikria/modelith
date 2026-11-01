@@ -1,5 +1,5 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
-import { CodegenError, generateProject, type GeneratedFile, type Project } from '@netloom/blocks';
+import { CodegenError, generateProject, type GeneratedFile, type Project } from '@modelith/blocks';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import '../monaco';
 import { useStore } from '../store';
@@ -63,7 +63,7 @@ export default function CodeView() {
       .map(([l]) => Number(l));
     decorations.current = ed.deltaDecorations(
       decorations.current,
-      lines.map((l) => ({ range: new mono.Range(l, 1, l, 1), options: { isWholeLine: true, className: 'netloom-code-highlight' } })),
+      lines.map((l) => ({ range: new mono.Range(l, 1, l, 1), options: { isWholeLine: true, className: 'modelith-code-highlight' } })),
     );
     if (lines.length) ed.revealLineInCenterIfOutsideViewport(lines[0]);
   }, [selected, file]);

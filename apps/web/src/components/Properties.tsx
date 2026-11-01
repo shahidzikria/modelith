@@ -1,4 +1,4 @@
-import { formatCount, formatShape, getBlock, kindName, requiredMultiple, suggestNext, suggestParamValues, type Analysis, type GraphNode, type ParamSpec, type Project } from '@netloom/blocks';
+import { formatCount, formatShape, getBlock, kindName, requiredMultiple, suggestNext, suggestParamValues, type Analysis, type GraphNode, type ParamSpec, type Project } from '@modelith/blocks';
 import { useMemo } from 'react';
 import { useStore } from '../store';
 import { CATEGORY_COLORS } from '../colors';

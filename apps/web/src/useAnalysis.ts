@@ -1,4 +1,4 @@
-import { analyze, type Analysis, type Project } from '@netloom/blocks';
+import { analyze, type Analysis, type Project } from '@modelith/blocks';
 import { useEffect, useState } from 'react';
 import { useStore } from './store';
 

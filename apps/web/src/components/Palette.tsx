@@ -1,4 +1,4 @@
-import { allBlocks, CATEGORIES, formatShape, getBlock, previewAppends, type Analysis, type BlockDef, type Category } from '@netloom/blocks';
+import { allBlocks, CATEGORIES, formatShape, getBlock, previewAppends, type Analysis, type BlockDef, type Category } from '@modelith/blocks';
 import { useMemo, useState } from 'react';
 import { CATEGORY_COLORS } from '../colors';
 import { redo, undo, useStore } from '../store';
@@ -104,7 +104,7 @@ export function Palette({ analysis }: { analysis: Analysis }) {
                       <button
                         draggable
                         onDragStart={(e) => {
-                          e.dataTransfer.setData('application/netloom-block', b.type);
+                          e.dataTransfer.setData('application/modelith-block', b.type);
                           e.dataTransfer.effectAllowed = 'copy';
                         }}
                         onClick={() => add(b)}

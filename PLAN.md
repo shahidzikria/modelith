@@ -1,4 +1,4 @@
-# Netloom — build plan
+# Modelith — build plan
 
 Drag-and-drop deep-learning model builder that exports runnable PyTorch / Keras 3 code.
 

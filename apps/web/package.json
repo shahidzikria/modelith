@@ -1,5 +1,5 @@
 {
-  "name": "@netloom/web",
+  "name": "@modelith/web",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
-    "@netloom/blocks": "*",
+    "@modelith/blocks": "*",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-tabs": "^1.1.12",

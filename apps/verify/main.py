@@ -1,4 +1,4 @@
-"""Netloom verify service: instantiate generated code, run a dummy forward pass, return real shapes.
+"""Modelith verify service: instantiate generated code, run a dummy forward pass, return real shapes.
 
 POST /verify  {"framework": "pytorch", "files": {"model.py": "..."}}
 → {"ok": true, "params": 11689512, "outputs": {"classifier": [2, 1000]}, "seconds": 1.9}
@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field
 TIMEOUT_S = int(os.environ.get("VERIFY_TIMEOUT", "120"))
 MAX_BYTES = 2_000_000
 
-app = FastAPI(title="Netloom verify")
+app = FastAPI(title="Modelith verify")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.environ.get("VERIFY_ORIGINS", "http://localhost:5173,http://localhost:4173").split(","),

@@ -1,4 +1,4 @@
-import type { Category } from '@netloom/blocks';
+import type { Category } from '@modelith/blocks';
 
 /** Okabe–Ito palette: distinguishable with the common forms of colour blindness. */
 export const CATEGORY_COLORS: Record<Category, string> = {

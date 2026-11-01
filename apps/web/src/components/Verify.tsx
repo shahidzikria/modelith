@@ -1,4 +1,4 @@
-import { formatCount, generateProject, type Analysis } from '@netloom/blocks';
+import { formatCount, generateProject, type Analysis } from '@modelith/blocks';
 import { useState } from 'react';
 import { useStore } from '../store';
 

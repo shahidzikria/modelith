@@ -1,4 +1,4 @@
-import type { GraphEdge, GraphNode } from '@netloom/blocks';
+import type { GraphEdge, GraphNode } from '@modelith/blocks';
 
 type Elk = { layout: (g: unknown) => Promise<{ children?: { id: string; x?: number; y?: number }[] }> };
 let elk: Promise<Elk> | undefined;

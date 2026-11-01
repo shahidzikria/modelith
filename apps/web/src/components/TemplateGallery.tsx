@@ -1,4 +1,4 @@
-import { getBlock, templates, type Project, type Template } from '@netloom/blocks';
+import { getBlock, templates, type Project, type Template } from '@modelith/blocks';
 import { useMemo } from 'react';
 import { CATEGORY_COLORS } from '../colors';
 import { emptyProject, useStore } from '../store';

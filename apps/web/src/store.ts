@@ -9,7 +9,7 @@ import {
   type GraphNode,
   type Params,
   type Project,
-} from '@netloom/blocks';
+} from '@modelith/blocks';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { temporal } from 'zundo';
@@ -83,12 +83,13 @@ export const emptyProject = (): Project => ({
   notes: '',
 });
 
-const STORAGE_KEY = 'netloom:project';
-const THEME_KEY = 'netloom:theme';
+const STORAGE_KEY = 'modelith:project';
+const THEME_KEY = 'modelith:theme';
 
 function loadSaved(): Project | undefined {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    // Fall back to the key used before the rename from Netloom.
+    const raw = localStorage.getItem(STORAGE_KEY) ?? localStorage.getItem('netloom:project');
     if (!raw) return undefined;
     const p = JSON.parse(raw) as Project;
     if (p.version !== 2 || !Array.isArray(p.nodes)) return undefined;

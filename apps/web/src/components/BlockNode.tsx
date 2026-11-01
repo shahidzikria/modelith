@@ -1,4 +1,4 @@
-import { formatCount, formatShape, kindName, type BlockDef, type NodeInfo, type Shape } from '@netloom/blocks';
+import { formatCount, formatShape, kindName, type BlockDef, type NodeInfo, type Shape } from '@modelith/blocks';
 import { Handle, NodeToolbar, Position, type Node, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 import { CATEGORY_COLORS } from '../colors';

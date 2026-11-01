@@ -1,4 +1,4 @@
-import { formatShape, getBlock, incoming, kindName, type Analysis } from '@netloom/blocks';
+import { formatShape, getBlock, incoming, kindName, type Analysis } from '@modelith/blocks';
 import {
   Background,
   Controls,
@@ -154,7 +154,7 @@ export function Canvas({ analysis }: { analysis: Analysis }) {
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
-      const type = e.dataTransfer.getData('application/netloom-block');
+      const type = e.dataTransfer.getData('application/modelith-block');
       if (!type) return;
       e.preventDefault();
       const pos = screenToFlowPosition({ x: e.clientX, y: e.clientY });

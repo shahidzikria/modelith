@@ -1,4 +1,4 @@
-import { ident, type GeneratedFile } from '@netloom/blocks';
+import { ident, type GeneratedFile } from '@modelith/blocks';
 import JSZip from 'jszip';
 
 export function download(blob: Blob, filename: string): void {
