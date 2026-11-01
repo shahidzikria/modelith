@@ -1,6 +1,7 @@
 import { formatCount, formatShape, getBlock, trainingMemoryBytes, type Analysis } from '@netloom/blocks';
 import { useState } from 'react';
 import { useStore } from '../store';
+import { Verify } from './Verify';
 
 const GB = 1024 ** 3;
 
@@ -43,6 +44,8 @@ export function Summary({ analysis }: { analysis: Analysis }) {
           {mem > 24 * GB && <span className="text-danger"> Above 24 GB: lower the batch size or input resolution.</span>}
         </p>
       </div>
+
+      <Verify analysis={analysis} />
 
       <section aria-label="Validation">
         <h3 className="mb-2 text-xs font-semibold tracking-wide text-muted uppercase">
