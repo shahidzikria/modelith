@@ -84,7 +84,7 @@ Run \`python model.py\` for a smoke test. Train with \`python train.py\`.
     src.add('# ' + '-'.repeat(75));
     src.blank(2);
     for (const id of blockHelpers) {
-      src.add(kerasHelpers[id].code);
+      src.add(kerasHelpers[id].code, 0, undefined, false);
       src.blank(2);
     }
   }
@@ -106,7 +106,7 @@ Run \`python model.py\` for a smoke test. Train with \`python train.py\`.
 
   const lossHelpers = helpers.filter((id) => kerasHelpers[id].section === 'loss' || kerasHelpers[id].section === 'post');
   for (const id of lossHelpers) {
-    src.add(kerasHelpers[id].code);
+    src.add(kerasHelpers[id].code, 0, undefined, false);
     src.blank(2);
   }
 

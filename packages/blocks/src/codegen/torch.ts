@@ -67,7 +67,11 @@ export function generateTorchModel(ir: IR): GeneratedFile {
   }
   const helpers = resolveHelpers(helperIds, torchHelpers);
   for (const id of helpers) for (const i of torchHelpers[id].imports ?? []) imports.add(i);
-  const allCode = helpers.map((id) => torchHelpers[id].code).join('\n') + code.map((c) => c.emit.init ?? '').join('\n');
+  const allCode = [
+    ...helpers.map((id) => torchHelpers[id].code),
+    ...code.map((c) => c.emit.init ?? ''),
+    ...code.map((c) => forwardExpr(c.node, c.emit, 'self.x')),
+  ].join('\n');
   const usesMath = /\bmath\./.test(allCode);
   const usesF = /\bF\./.test(allCode);
 
@@ -114,7 +118,7 @@ prints every output shape and the parameter count). Train with \`python train.py
     src.add('# ' + '-'.repeat(75));
     src.blank(2);
     for (const id of blockHelpers) {
-      src.add(torchHelpers[id].code);
+      src.add(torchHelpers[id].code, 0, undefined, false);
       src.blank(2);
     }
   }
@@ -136,7 +140,7 @@ prints every output shape and the parameter count). Train with \`python train.py
     src.add('# ' + '-'.repeat(75));
     src.blank(2);
     for (const id of ids) {
-      src.add(torchHelpers[id].code);
+      src.add(torchHelpers[id].code, 0, undefined, false);
       src.blank(2);
     }
   }

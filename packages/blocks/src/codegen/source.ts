@@ -16,11 +16,11 @@ export class Source {
   private nodes: (string | undefined)[] = [];
 
   /** Append text (may contain newlines) at an indent level, tagging every line with a node id. */
-  add(text: string, indentLevel = 0, nodeId?: string): this {
+  add(text: string, indentLevel = 0, nodeId?: string, wrap = true): this {
     const pad = '    '.repeat(indentLevel);
     for (const raw of text.split('\n')) {
       const line = raw.trim() ? pad + raw : '';
-      for (const l of wrapLine(line)) {
+      for (const l of wrap ? wrapLine(line) : [line]) {
         this.lines.push(l);
         this.nodes.push(nodeId);
       }
@@ -128,7 +128,8 @@ export function wrapLine(line: string): string[] {
   const head = body.slice(0, open + 1);
   const inner = body.slice(open + 1, -1);
   const args = splitTopLevel(inner);
-  if (args.length === 0) return [line];
+  // A lone generator-expression argument cannot take a trailing comma.
+  if (args.length === 0 || (args.length === 1 && /sfors/.test(args[0]))) return [line];
   const pad = line.match(/^ */)![0];
   const argPad = pad + '    ';
   const out = [head];

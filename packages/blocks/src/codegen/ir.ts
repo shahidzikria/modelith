@@ -80,6 +80,8 @@ export function buildIR(project: { name: string; framework: Framework; nodes: Gr
     names.set(id, name);
   }
 
+  const imgNode = project.nodes.find((n) => n.type === "image_input" && analysis.nodes[n.id]?.used);
+  const imageSize = imgNode ? { h: Number(imgNode.params.height), w: Number(imgNode.params.width) } : undefined;
   const nodes: IRNode[] = used.map((id) => {
     const n = byId.get(id)!;
     const def = requireBlock(n.type);
@@ -95,11 +97,10 @@ export function buildIR(project: { name: string; framework: Framework; nodes: Gr
       inputIds: inEdges.map((e) => e.source),
       ins: ni.ins,
       out: ni.shape!,
-      head: def.head?.(n.params, ni.ins, ni.shape!),
+      head: def.head?.(n.params, ni.ins, ni.shape!, { framework: project.framework, imageSize }),
     };
   });
 
-  const imgIn = nodes.find((n) => n.type === 'image_input');
   return {
     name: project.name,
     framework: project.framework,
@@ -108,7 +109,7 @@ export function buildIR(project: { name: string; framework: Framework; nodes: Gr
     heads: nodes.filter((n) => n.head),
     wrapper: nodes.find((n) => n.def.wrapsGraph),
     analysis,
-    imageSize: imgIn ? { h: imgIn.params.height, w: imgIn.params.width } : undefined,
+    imageSize,
     pretrained: nodes.some((n) => n.def.pretrained?.(n.params)),
     hasTransformer: nodes.some((n) => /transformer|vit|detr|swin/.test(n.type) || (n.type === 'timm_backbone' && /vit|swin|dinov2/.test(String(n.params.model)))),
   };

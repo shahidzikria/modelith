@@ -8,3 +8,5 @@ export { analyze, incoming, topoSort, trainingMemoryBytes, type Analysis, type I
 export { buildIR, CodegenError, type IR, type IRNode } from './codegen/ir';
 export { generateProject, PINNED, type GeneratedProject } from './codegen/project';
 export type { GeneratedFile } from './codegen/source';
+export { templates, getTemplate, type Template } from './templates/index';
+export { GraphBuilder } from './templates/builder';

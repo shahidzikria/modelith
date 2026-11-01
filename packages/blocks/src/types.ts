@@ -167,6 +167,8 @@ export interface HeadTrainSpec {
   targetDoc: string;
   /** Optional post-processing function name (defined in helpers). */
   postprocess?: string;
+  /** Extra keyword arguments for the post-processing call during evaluation. */
+  postprocessArgs?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +200,7 @@ export interface BlockDef {
   macs?(ins: Shape[], p: Params, out: Shape, params: number): number;
   emitTorch(ctx: EmitCtx): TorchEmit | Unsupported;
   emitKeras(ctx: EmitCtx): KerasEmit | Unsupported;
-  head?: (p: Params, ins: Shape[], out: Shape) => HeadTrainSpec;
+  head?: (p: Params, ins: Shape[], out: Shape, ctx: InferCtx) => HeadTrainSpec;
   /** torchvision detectors: whole upstream graph becomes the backbone. */
   wrapsGraph?: boolean;
   /** Approximate train-mode activation bytes multiplier (default 1 × output size). */
@@ -246,4 +248,5 @@ export interface Project {
   nodes: GraphNode[];
   edges: GraphEdge[];
   customBlocks: CustomBlock[];
+  notes?: string;
 }

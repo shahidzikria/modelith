@@ -195,6 +195,16 @@ defineTorchHelpers({
     `),
   },
 
+  crf_decode: {
+    section: "post",
+    deps: ["CRF"],
+    code: dedent(`
+      def crf_decode(emissions: torch.Tensor, crf: CRF) -> torch.Tensor:
+          """Most likely tag sequence (B, L) under the trained CRF (Viterbi decoding)."""
+          return crf.decode(emissions)
+    `),
+  },
+
   SegmentationLoss: {
     section: 'loss',
     code: dedent(`

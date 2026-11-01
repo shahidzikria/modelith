@@ -28,9 +28,11 @@ export function defaultHyper(ir: IR): TrainHyper {
 
 function sampleInput(n: IRNode): string {
   const s = n.out;
-  if (s.kind === 'tokens') return `torch.randint(0, ${s.vocab}, ${pyShape(s, 'pytorch', '').replace('(, ', '(')})`;
-  if (s.kind === 'image' && n.params.norm !== 'imagenet') return `torch.rand(${s.c}, ${s.h}, ${s.w})`;
-  return `torch.randn${pyShape(s, 'pytorch', '').replace('(, ', '(')}`;
+  // Per-sample shape: drop the batch dimension from the (B, ...) layout tuple.
+  const dims = pyShape(s, 'pytorch', 0).slice(1, -1).split(', ').slice(1).map(Number);
+  if (s.kind === 'tokens') return `torch.randint(0, ${s.vocab}, ${py(dims)})`;
+  if (s.kind === 'image' && n.params.norm !== 'imagenet') return `torch.rand(${dims.join(', ')})`;
+  return `torch.randn(${dims.join(', ')})`;
 }
 
 function inputDoc(n: IRNode): string {
@@ -52,6 +54,11 @@ const METRICS_CODE: Record<string, string> = {
         self.correct = self.correct5 = self.total = 0
 
     def update(self, logits: torch.Tensor, target: torch.Tensor) -> None:
+        if not logits.is_floating_point():  # already-decoded tags (e.g. CRF Viterbi), (B, L)
+            mask = target != -100
+            self.correct += (logits[mask] == target[mask]).sum().item()
+            self.total += mask.sum().item()
+            return
         if logits.ndim == 3:
             mask = target != -100
             self.correct += (logits.argmax(-1)[mask] == target[mask]).sum().item()
@@ -297,6 +304,16 @@ Replace SyntheticDataset in build_datasets() with real data; the docstrings give
     return {"boxes": boxes, "labels": torch.randint(0, num_classes, (n,))}`);
     src.blank(2);
   }
+  if (heads.some((h) => h.head!.task === 'instance')) {
+    src.add(`def random_instance_target(height: int, width: int, num_classes: int) -> dict[str, torch.Tensor]:
+    """Random boxes plus a filled-rectangle mask per box (uint8, (N, H, W))."""
+    target = random_detection_target(height, width, num_classes)
+    masks = torch.zeros(len(target["boxes"]), height, width, dtype=torch.uint8)
+    for mask, (x1, y1, x2, y2) in zip(masks, target["boxes"].round().long().tolist()):
+        mask[y1:y2, x1:x2] = 1
+    return {**target, "masks": masks}`);
+    src.blank(2);
+  }
 
   const docLines = [
     ...ir.inputs.map((i) => `    inputs[${py(i.name)}]: ${inputDoc(i)}`),
@@ -513,7 +530,7 @@ def to_device(x, device: str):
     for (const h of post) {
       const fn = h.head!.postprocess!;
       if (fn === 'crf_decode') src.add(`outputs[${py(h.name)}] = crf_decode(outputs[${py(h.name)}], criteria[${py(h.name)}])`, 2);
-      else src.add(`outputs[${py(h.name)}] = ${fn}(outputs[${py(h.name)}])`, 2);
+      else src.add(`outputs[${py(h.name)}] = ${fn}(outputs[${py(h.name)}]${h.head!.postprocessArgs ? `, ${h.head!.postprocessArgs}` : ""})`, 2);
     }
     src.addCont(`for name, metric in metrics.items():
             metric.update(outputs[name], targets[name])
