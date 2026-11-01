@@ -31,6 +31,7 @@ mistakes. When the graph is ready, it generates a complete, runnable project: `m
 7. [Project structure](#project-structure)
 8. [Adding a block](#adding-a-block)
 9. [Status and limitations](#status-and-limitations)
+10. [License](#license)
 
 ---
 
@@ -335,3 +336,7 @@ See [PLAN.md](PLAN.md) for milestones.
   against the real models (±3%).
 - Not built yet: grouping blocks into reusable custom blocks, an AI assistant, importing existing PyTorch/ONNX
   models, hyper-parameter sweep export, version history and share links.
+
+## License
+
+[MIT](LICENSE) © 2026 Shahid Zikria
