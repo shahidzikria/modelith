@@ -71,7 +71,8 @@ export function expectKind<K extends ShapeKind>(s: Shape | undefined, kind: K, w
   return s as Extract<Shape, { kind: K }>;
 }
 
-function fixFor(have: ShapeKind, want: ShapeKind): string | undefined {
+/** How to turn one tensor kind into another, if there is a standard block for it. */
+export function fixFor(have: ShapeKind, want: ShapeKind): string | undefined {
   if (have === 'image' && want === 'vector') return 'Add Global average pool or Flatten first.';
   if (have === 'image' && want === 'sequence') return 'Add Patch embed or Image → sequence first.';
   if (have === 'sequence' && want === 'vector') return 'Add Sequence pooling first.';

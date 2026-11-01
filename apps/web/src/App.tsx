@@ -67,7 +67,7 @@ function Shell() {
           className={`${drawer('left')} border-r md:block md:w-60 lg:w-64 ${mobilePanel === 'palette' ? 'block' : 'hidden'}`}
           aria-label="Palette"
         >
-          <Palette />
+          <Palette analysis={analysis} />
         </aside>
         <main className="relative min-w-0 flex-1">
           <Canvas analysis={analysis} />

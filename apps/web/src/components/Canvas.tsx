@@ -15,8 +15,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CATEGORY_COLORS } from '../colors';
 import { createsCycle, useStore } from '../store';
 import { BlockNode, type BlockFlowNode } from './BlockNode';
+import { ShapeEdge, type ShapeFlowEdge } from './ShapeEdge';
 
 const nodeTypes = { block: BlockNode };
+const edgeTypes = { shape: ShapeEdge };
 
 export function Canvas({ analysis }: { analysis: Analysis }) {
   const project = useStore((s) => s.project);
@@ -35,7 +37,8 @@ export function Canvas({ analysis }: { analysis: Analysis }) {
       return project.nodes.map((n) => {
         const def = getBlock(n.type)!;
         const p = prevById.get(n.id);
-        const connected = def.variadic ? incoming(n.id, project.edges, def).length : 0;
+        const into = incoming(n.id, project.edges, def);
+        const connected = def.variadic ? into.length : 0;
         return {
           id: n.id,
           type: 'block' as const,
@@ -47,6 +50,7 @@ export function Canvas({ analysis }: { analysis: Analysis }) {
             title: n.label ?? def.label,
             info: analysis.nodes[n.id],
             ports: def.variadic ? Math.max(2, connected + 1) : def.inputs.length,
+            inShapes: into.map((e) => (e ? analysis.nodes[e.source]?.shape : undefined)),
             highlighted: codeHighlight === n.id,
           },
         };
@@ -58,7 +62,7 @@ export function Canvas({ analysis }: { analysis: Analysis }) {
     if (viewNonce) requestAnimationFrame(() => fitView({ padding: 0.15, duration: 300 }));
   }, [viewNonce, fitView]);
 
-  const edges: Edge[] = useMemo(
+  const edges: ShapeFlowEdge[] = useMemo(
     () =>
       project.edges.map((e) => {
         const src = analysis.nodes[e.source]?.shape;
@@ -70,9 +74,8 @@ export function Canvas({ analysis }: { analysis: Analysis }) {
           target: e.target,
           targetHandle: `in-${e.targetPort}`,
           sourceHandle: 'out',
-          label: src ? formatShape(src) : undefined,
-          labelBgPadding: [4, 2] as [number, number],
-          labelBgBorderRadius: 4,
+          type: 'shape' as const,
+          data: { shape: src ? formatShape(src) : undefined, bad },
           selected: selectedEdges.includes(e.id),
           style: bad ? { stroke: 'var(--danger)', strokeWidth: 1.5 } : { strokeWidth: 1.5 },
           ariaLabel: `Edge carrying ${src ? formatShape(src) : 'unknown shape'}`,
@@ -161,10 +164,11 @@ export function Canvas({ analysis }: { analysis: Analysis }) {
   );
 
   return (
-    <ReactFlow<BlockFlowNode, Edge>
+    <ReactFlow<BlockFlowNode, ShapeFlowEdge>
       nodes={rfNodes}
       edges={edges}
       nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onNodeDragStop={onNodeDragStop}

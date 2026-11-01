@@ -1,4 +1,5 @@
-import { formatCount, formatShape, getBlock, type Analysis, type ParamSpec } from '@netloom/blocks';
+import { formatCount, formatShape, getBlock, kindName, requiredMultiple, suggestNext, suggestParamValues, type Analysis, type GraphNode, type ParamSpec, type Project } from '@netloom/blocks';
+import { useMemo } from 'react';
 import { useStore } from '../store';
 import { CATEGORY_COLORS } from '../colors';
 
@@ -70,11 +71,62 @@ function Field({ spec, value, onChange, id, describedBy }: { spec: ParamSpec; va
   }
 }
 
+const btn = 'rounded-md border px-2 py-1 text-xs';
+
+/** Clickable values that keep the graph valid, under an integer field. */
+function Suggestions({ project, node, spec, onPick }: { project: Project; node: GraphNode; spec: ParamSpec; onPick: (v: number) => void }) {
+  const values = useMemo(
+    () => (spec.type === 'int' ? suggestParamValues(project, node.id, spec.key) : undefined),
+    [project, node.id, spec.key, spec.type],
+  );
+  if (!values?.length) return null;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-1" aria-label={`Suggested values for ${spec.label}`}>
+      <span className="text-[10px] text-muted">Suggested</span>
+      {values.map(({ value, current }) => (
+        <button
+          key={value}
+          onClick={() => onPick(value)}
+          aria-pressed={current}
+          className={`rounded border px-1.5 font-mono text-[11px] ${current ? 'border-accent bg-accent/15' : 'border-line hover:bg-panel-2'}`}
+        >
+          {value}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function NextBlocks({ project, analysis, nodeId }: { project: Project; analysis: Analysis; nodeId: string }) {
+  const addNode = useStore((s) => s.addNode);
+  const next = useMemo(() => suggestNext(project, analysis, nodeId), [project, analysis, nodeId]);
+  if (!next.length) return null;
+  return (
+    <section className="mt-4" aria-label="Suggested next blocks">
+      <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-muted uppercase">Next layer</h3>
+      <ul className="space-y-1">
+        {next.map((s) => (
+          <li key={s.type}>
+            <button
+              onClick={() => addNode(s.type, undefined, { connectFrom: nodeId })}
+              className="flex w-full items-center gap-2 rounded-md border border-line px-2 py-1 text-left text-xs hover:bg-panel-2"
+            >
+              <span className="h-2 w-2 shrink-0 rounded-sm" style={{ background: CATEGORY_COLORS[getBlock(s.type)!.category] }} aria-hidden />
+              <span className="flex-1 truncate">+ {getBlock(s.type)!.label}</span>
+              <span className="shrink-0 font-mono text-muted">→ {formatShape(s.shape!)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export function Properties({ analysis }: { analysis: Analysis }) {
   const selected = useStore((s) => s.selected);
-  const node = useStore((s) => s.project.nodes.find((n) => n.id === s.selected[s.selected.length - 1]));
-  const updateParams = useStore((s) => s.updateParams);
-  const setLabel = useStore((s) => s.setLabel);
+  const project = useStore((s) => s.project);
+  const node = project.nodes.find((n) => n.id === selected[selected.length - 1]);
+  const { updateParams, setLabel, removeNodes, resetParams, duplicate } = useStore.getState();
 
   if (!node) {
     return (
@@ -87,11 +139,24 @@ export function Properties({ analysis }: { analysis: Analysis }) {
     );
   }
   if (selected.length > 1) {
-    return <div className="p-4 text-sm text-muted">{selected.length} blocks selected. Ctrl+C / Ctrl+V to copy, Ctrl+D to duplicate, Del to delete.</div>;
+    return (
+      <div className="space-y-3 p-4 text-sm text-muted">
+        <p>{selected.length} blocks selected. Ctrl+C / Ctrl+V to copy, Ctrl+D to duplicate, Del to delete.</p>
+        <div className="flex gap-2">
+          <button onClick={duplicate} className={`${btn} border-line text-fg hover:bg-panel-2`}>
+            Duplicate
+          </button>
+          <button onClick={() => removeNodes(selected)} className={`${btn} border-danger/50 text-danger hover:bg-danger/10`}>
+            Delete {selected.length} blocks
+          </button>
+        </div>
+      </div>
+    );
   }
   const def = getBlock(node.type)!;
   const info = analysis.nodes[node.id];
   const visible = def.params.filter((p) => !p.showIf || p.showIf.equals.includes(node.params[p.showIf.key]));
+  const multiple = node.type === 'image_input' ? requiredMultiple(analysis) : 1;
 
   return (
     <div className="p-4">
@@ -99,6 +164,17 @@ export function Properties({ analysis }: { analysis: Analysis }) {
         <span className="h-3 w-3 rounded-sm" style={{ background: CATEGORY_COLORS[def.category] }} aria-hidden />
         <h2 className="text-sm font-semibold">{def.label}</h2>
         <span className="text-xs text-muted">· {def.category}</span>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button onClick={duplicate} className={`${btn} border-line hover:bg-panel-2`}>
+          Duplicate
+        </button>
+        <button onClick={() => resetParams(node.id)} className={`${btn} border-line hover:bg-panel-2`} title="Restore this block's default hyper-parameters">
+          Reset parameters
+        </button>
+        <button onClick={() => removeNodes([node.id])} className={`${btn} border-danger/50 text-danger hover:bg-danger/10`}>
+          Delete block
+        </button>
       </div>
       <p className="mt-1.5 text-xs leading-relaxed text-muted">{def.doc}</p>
       {def.paper && <p className="mt-1 text-xs text-muted italic">Paper: {def.paper}</p>}
@@ -122,6 +198,16 @@ export function Properties({ analysis }: { analysis: Analysis }) {
             <dd className="font-mono">{formatShape(s)}</dd>
           </div>
         ))}
+        {!info?.ins.length &&
+          def.inputs.map((p) => (
+            <div key={p.name} className="contents">
+              <dt className="text-muted">in {p.name}</dt>
+              <dd className="text-muted italic">
+                {info?.waiting ? 'waiting for upstream' : `connect ${p.accepts.map(kindName).join(' / ')}`}
+                {p.optional ? ' (optional)' : ''}
+              </dd>
+            </div>
+          ))}
         <dt className="text-muted">out</dt>
         <dd className="font-mono">{info?.shape ? formatShape(info.shape) : '—'}</dd>
         <dt className="text-muted">params</dt>
@@ -174,11 +260,16 @@ export function Properties({ analysis }: { analysis: Analysis }) {
                 value={node.params[spec.key]}
                 onChange={(v) => updateParams(node.id, { [spec.key]: v })}
               />
+              <Suggestions project={project} node={node} spec={spec} onPick={(v) => updateParams(node.id, { [spec.key]: v })} />
+              {multiple > 1 && (spec.key === 'height' || spec.key === 'width') && (
+                <p className="mt-1 text-[10px] text-muted">The network downsamples {multiple}×, so keep this a multiple of {multiple}.</p>
+              )}
             </div>
           );
         })}
         {!visible.length && def.isInput === undefined && <p className="text-xs text-muted">This block has no hyper-parameters.</p>}
       </div>
+      {!def.head && <NextBlocks project={project} analysis={analysis} nodeId={node.id} />}
     </div>
   );
 }

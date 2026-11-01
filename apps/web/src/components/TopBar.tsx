@@ -3,6 +3,7 @@ import { useStore as useZustand } from 'zustand';
 import { autoLayout } from '../layout';
 import { redo, undo, useStore, type Theme } from '../store';
 import { download } from '../zip';
+import { ResetButton } from './ResetDialog';
 
 export async function runAutoLayout() {
   const { project, moveNodes, requestFit } = useStore.getState();
@@ -100,6 +101,7 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
         <Btn label="Fit view (F)" onClick={requestFit}>
           Fit
         </Btn>
+        <ResetButton />
       </div>
       <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
         <div className="flex rounded-md border border-line p-0.5 text-xs" role="radiogroup" aria-label="Framework">

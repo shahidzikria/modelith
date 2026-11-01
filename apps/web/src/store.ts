@@ -44,6 +44,9 @@ export interface State {
   requestFit(): void;
 
   setProject(p: Project): void;
+  /** Clear the canvas (undoable); keeps the framework choice. */
+  resetProject(): void;
+  resetParams(id: string): void;
   rename(name: string): void;
   setFramework(f: Framework): void;
   setNotes(notes: string): void;
@@ -138,6 +141,17 @@ export const useStore = create<State>()(
           s.selected = [];
           s.showGallery = false;
           s.viewNonce++;
+        }),
+      resetProject: () =>
+        set((s) => {
+          s.project = { ...emptyProject(), framework: s.project.framework };
+          s.selected = [];
+          s.codeHighlight = undefined;
+        }),
+      resetParams: (id) =>
+        set((s) => {
+          const n = s.project.nodes.find((x) => x.id === id);
+          if (n) n.params = { ...defaultParams(n.type), ...(getBlock(n.type)?.isInput ? { name: n.params.name } : {}) };
         }),
       rename: (name) =>
         set((s) => {

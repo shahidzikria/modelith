@@ -93,3 +93,40 @@ test.describe('phone viewport', () => {
     expect(overflow).toBe(false);
   });
 });
+
+test('shape previews, suggestions, delete buttons and reset', async ({ page }) => {
+  await fresh(page);
+  await page.getByRole('button', { name: /Empty canvas/ }).click();
+  await palette(page, 'Image').click();
+  await palette(page, 'Conv·BN·Act').click();
+  await expect(node(page, 'Conv·BN·Act')).toContainText('3×224×224');
+
+  // With the conv selected, the palette previews each block's output after it.
+  await expect(palette(page, 'Global average pool')).toContainText('→ 64');
+  await expect(palette(page, 'Embedding')).toContainText('Needs token ids');
+
+  // "Next layer" suggestions append and connect.
+  await page.getByRole('region', { name: 'Suggested next blocks' }).getByRole('button', { name: /Global average pool/ }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(3);
+  await expect(page.locator('.react-flow__edge')).toHaveCount(2);
+
+  // Suggested input sizes update the whole graph.
+  await node(page, 'Image').click({ position: { x: 60, y: 14 } });
+  await page.getByLabel('Suggested values for Height').getByRole('button', { name: '256', exact: true }).click();
+  await expect(node(page, 'Conv·BN·Act')).toContainText('64×256×224');
+
+  // Delete from the node toolbar and from the properties panel.
+  await node(page, 'Global average pool').click({ position: { x: 60, y: 14 } });
+  await page.getByRole('button', { name: 'Delete Global average pool' }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(2);
+  await node(page, 'Conv·BN·Act').click({ position: { x: 60, y: 14 } });
+  await page.getByRole('button', { name: 'Delete block' }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(1);
+
+  // Reset clears the canvas after confirmation and is undoable.
+  await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  await page.getByRole('button', { name: 'Reset canvas' }).click();
+  await expect(page.locator('.react-flow__node')).toHaveCount(0);
+  await page.keyboard.press('Control+z');
+  await expect(page.locator('.react-flow__node')).toHaveCount(1);
+});
