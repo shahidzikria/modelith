@@ -1,5 +1,5 @@
 import { ReactFlowProvider, useReactFlow } from '@xyflow/react';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Canvas } from './components/Canvas';
 import { Inspector } from './components/Inspector';
 import { Palette } from './components/Palette';
@@ -8,6 +8,20 @@ import { Toasts } from './components/Toasts';
 import { runAutoLayout, TopBar } from './components/TopBar';
 import { redo, undo, useStore } from './store';
 import { useAnalysis } from './useAnalysis';
+
+const Studio = lazy(() => import('./studio/Studio'));
+
+/** '#/preprocess' opens the Preprocessing Studio; anything else the model builder. */
+function useRoute(): 'model' | 'studio' {
+  const get = () => (window.location.hash.startsWith('#/preprocess') ? 'studio' : 'model');
+  const [route, setRoute] = useState<'model' | 'studio'>(get);
+  useEffect(() => {
+    const fn = () => setRoute(get());
+    window.addEventListener('hashchange', fn);
+    return () => window.removeEventListener('hashchange', fn);
+  }, []);
+  return route;
+}
 
 function isTyping(e: KeyboardEvent): boolean {
   const t = e.target as HTMLElement | null;
@@ -54,7 +68,6 @@ function Shell() {
   const setMobilePanel = useStore((s) => s.setMobilePanel);
   const setShowGallery = useStore((s) => s.setShowGallery);
   useShortcuts();
-  useThemeAttr();
 
   const drawer = (side: 'left' | 'right') =>
     `fixed inset-y-0 ${side}-0 z-40 w-[86vw] max-w-sm border-line bg-panel shadow-xl md:static md:z-auto md:w-auto md:max-w-none md:shadow-none`;
@@ -105,6 +118,17 @@ function Shell() {
 }
 
 export default function App() {
+  const route = useRoute();
+  useThemeAttr();
+  useEffect(() => {
+    document.title = route === 'studio' ? 'Preprocessing Studio · Modelith' : 'Modelith';
+  }, [route]);
+  if (route === 'studio')
+    return (
+      <Suspense fallback={<p className="p-6 text-sm text-muted">Loading Preprocessing Studio…</p>}>
+        <Studio />
+      </Suspense>
+    );
   return (
     <ReactFlowProvider>
       <Shell />

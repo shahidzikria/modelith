@@ -3,6 +3,8 @@ import { useStore as useZustand } from 'zustand';
 import { autoLayout } from '../layout';
 import { redo, undo, useStore, type Theme } from '../store';
 import { download } from '../zip';
+import { ViewSwitch } from '../studio/ViewSwitch';
+import { importPipelines, useLinks } from '../studio/links';
 import { ResetButton } from './ResetDialog';
 
 export async function runAutoLayout() {
@@ -37,7 +39,9 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
 
   const exportProject = () => {
     const p = useStore.getState().project;
-    download(new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' }), `${p.name.replace(/\W+/g, '_')}.modelith.json`);
+    // Preprocessing pipelines travel with the project.
+    const pipelines = useLinks.getState().pipelines;
+    download(new Blob([JSON.stringify(pipelines.length ? { ...p, pipelines } : p, null, 2)], { type: 'application/json' }), `${p.name.replace(/\W+/g, '_')}.modelith.json`);
   };
   const importProject = () => {
     const input = document.createElement('input');
@@ -47,9 +51,10 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
       const f = input.files?.[0];
       if (!f) return;
       try {
-        const p = JSON.parse(await f.text()) as Project;
+        const { pipelines, ...p } = JSON.parse(await f.text()) as Project & { pipelines?: unknown[] };
         if (p.version !== 2 || !Array.isArray(p.nodes)) throw new Error('not a Modelith v2 project');
         setProject(p);
+        if (Array.isArray(pipelines) && pipelines.length) importPipelines(pipelines);
         toast(`Imported ${p.name}`, 'success');
       } catch (e) {
         toast(`Import failed: ${(e as Error).message}`, 'error');
@@ -65,8 +70,9 @@ export function TopBar({ analysis }: { analysis: Analysis }) {
       </button>
       <div className="flex shrink-0 items-center gap-2">
         <img src="/favicon.svg" alt="" className="h-6 w-6" />
-        <span className="hidden font-semibold sm:inline">Modelith</span>
+        <span className="hidden font-semibold xl:inline">Modelith</span>
       </div>
+      <ViewSwitch active="model" />
       <label htmlFor="project-name" className="sr-only">
         Project name
       </label>

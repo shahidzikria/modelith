@@ -4,7 +4,7 @@ import type { Project } from '../types';
 import { buildIR, type IR } from './ir';
 import { generateKerasModel, generateKerasTrain } from './keras';
 import { Source, type GeneratedFile } from './source';
-import { defaultHyper, generateTorchTrain, type TrainHyper } from './torchTrain';
+import { defaultHyper, generateTorchTrain, type DataHook, type TrainHyper } from './torchTrain';
 import { generateTorchModel, torchNodeCode } from './torch';
 
 /** Versions the generated code is tested against in CI. */
@@ -19,6 +19,7 @@ export const PINNED = {
   tensorflow: 'tensorflow==2.18.0',
   keras: 'keras>=3.6',
   numpy: 'numpy>=1.26',
+  opencv: 'opencv-contrib-python-headless==4.12.0.88',
 };
 
 export interface GeneratedProject {
@@ -27,14 +28,21 @@ export interface GeneratedProject {
   hyper: TrainHyper;
 }
 
-export function generateProject(project: Project): GeneratedProject {
+export interface ProjectOptions {
+  /** Files and train.py data loading from a linked Preprocessing Studio pipeline. */
+  preprocessing?: { files: GeneratedFile[]; train: DataHook };
+}
+
+export function generateProject(project: Project, opts: ProjectOptions = {}): GeneratedProject {
   const ir = buildIR(project);
   const hyper = defaultHyper(ir);
+  const pre = opts.preprocessing;
   const files: GeneratedFile[] =
     ir.framework === 'pytorch'
-      ? [generateTorchModel(ir), generateTorchTrain(ir, hyper)]
+      ? [generateTorchModel(ir), generateTorchTrain(ir, hyper, pre?.train)]
       : [generateKerasModel(ir), generateKerasTrain(ir, hyper)];
-  files.push(configYaml(ir, hyper), requirements(ir), readme(ir), graphJson(project));
+  files.push(configYaml(ir, hyper), requirements(ir, !!pre), readme(ir, pre?.train.pipelineName), graphJson(project));
+  if (pre) files.push(...pre.files.filter((f) => !files.some((x) => x.path === f.path)));
   return { files, ir, hyper };
 }
 
@@ -64,8 +72,12 @@ function configYaml(ir: IR, h: TrainHyper): GeneratedFile {
   return s.file('config.yaml', 'yaml');
 }
 
-function requirements(ir: IR): GeneratedFile {
+function requirements(ir: IR, preprocessing = false): GeneratedFile {
   const reqs = new Set<string>();
+  if (preprocessing) {
+    reqs.add(PINNED.numpy);
+    reqs.add(PINNED.opencv);
+  }
   if (ir.framework === 'pytorch') {
     reqs.add(PINNED.torch);
     reqs.add(PINNED.torchvision);
@@ -92,7 +104,7 @@ function requirements(ir: IR): GeneratedFile {
   return s.file('requirements.txt', 'text');
 }
 
-function readme(ir: IR): GeneratedFile {
+function readme(ir: IR, pipeline?: string): GeneratedFile {
   const fw = ir.framework === 'pytorch' ? 'PyTorch' : 'TensorFlow / Keras 3';
   const s = new Source();
   s.add(`# ${ir.name}`);
@@ -114,7 +126,9 @@ function readme(ir: IR): GeneratedFile {
   s.blank();
   s.add('```bash\npip install -r requirements.txt\npython model.py          # smoke test: shapes + parameter count\npython train.py          # trains on synthetic data out of the box\n```');
   s.blank();
-  s.add('Edit `build_datasets()` in `train.py` to plug in real data; the `SyntheticDataset` docstring lists the exact tensor formats.');
+  if (pipeline)
+    s.add(`Training data is loaded through the preprocessing pipeline **${pipeline}** (\`preprocess.py\`, \`dataset.py\`): put your data under \`data/train\` and \`data/val\` in one of the layouts listed in \`dataset.py\`.`);
+  else s.add('Edit `build_datasets()` in `train.py` to plug in real data; the `SyntheticDataset` docstring lists the exact tensor formats.');
   s.blank();
   s.add('## Files');
   s.blank();

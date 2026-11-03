@@ -2,6 +2,7 @@ import { formatCount, formatShape, kindName, type BlockDef, type NodeInfo, type 
 import { Handle, NodeToolbar, Position, type Node, type NodeProps } from '@xyflow/react';
 import { memo } from 'react';
 import { CATEGORY_COLORS } from '../colors';
+import { linkedPipeline, pipelineOutput, useLinks } from '../studio/links';
 import { useStore } from '../store';
 
 export interface BlockNodeData extends Record<string, unknown> {
@@ -99,6 +100,7 @@ function BlockNodeImpl({ id, data, selected }: NodeProps<BlockFlowNode>) {
           </dd>
         </dl>
         {error && <p className="mt-1 line-clamp-2 text-[10px] leading-snug text-danger">{error.fix ?? error.message}</p>}
+        {def.type === 'image_input' && <PipelineBadge nodeId={id} />}
       </div>
       {portNames.map((name, i) => (
         <Handle
@@ -117,3 +119,19 @@ function BlockNodeImpl({ id, data, selected }: NodeProps<BlockFlowNode>) {
 }
 
 export const BlockNode = memo(BlockNodeImpl);
+
+/** "🔗 pipeline · output shape" on Image inputs linked to a Preprocessing Studio pipeline. */
+function PipelineBadge({ nodeId }: { nodeId: string }) {
+  const pipeline = useLinks((s) => linkedPipeline(s.pipelines, nodeId));
+  if (!pipeline) return null;
+  return (
+    <a
+      href="#/preprocess"
+      className="nodrag mt-1.5 flex items-center gap-1 truncate rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent hover:bg-accent/20"
+      title={`Preprocessing: ${pipeline.name}, output ${pipelineOutput(pipeline)}. Click to open the Preprocessing Studio.`}
+    >
+      🔗 <span className="truncate">{pipeline.name}</span>
+      <span className="ml-auto shrink-0 font-mono">{pipelineOutput(pipeline)}</span>
+    </a>
+  );
+}

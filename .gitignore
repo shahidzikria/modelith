@@ -232,3 +232,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Preprocessing Studio test outputs
+tests/preprocess/generated/

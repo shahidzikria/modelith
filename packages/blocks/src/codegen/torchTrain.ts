@@ -235,7 +235,16 @@ function realDataHint(ir: IR): string[] {
   return lines;
 }
 
-export function generateTorchTrain(ir: IR, hyper: TrainHyper = defaultHyper(ir)): GeneratedFile {
+/** Real-data loading supplied by a linked preprocessing pipeline (Preprocessing Studio). */
+export interface DataHook {
+  /** Body of build_datasets() (already indented by 4 spaces, docstring included). */
+  buildDatasets: string;
+  /** Import lines added to train.py. */
+  imports: string[];
+  pipelineName: string;
+}
+
+export function generateTorchTrain(ir: IR, hyper: TrainHyper = defaultHyper(ir), data?: DataHook): GeneratedFile {
   const src = new Source();
   const internal = !!ir.wrapper;
   const heads = ir.heads;
@@ -252,7 +261,11 @@ export function generateTorchTrain(ir: IR, hyper: TrainHyper = defaultHyper(ir))
     python train.py --resume checkpoints/last.pt
     python train.py --epochs 1 --max-steps 2     # quick check
 
-Replace SyntheticDataset in build_datasets() with real data; the docstrings give the exact format.
+${
+    data
+      ? `Data is loaded through the linked preprocessing pipeline "${data.pipelineName}" (preprocess.py, dataset.py);\nwithout a data/ folder it falls back to synthetic samples.`
+      : 'Replace SyntheticDataset in build_datasets() with real data; the docstrings give the exact format.'
+  }
 """`);
   src.blank();
   src.add('from __future__ import annotations');
@@ -268,6 +281,10 @@ Replace SyntheticDataset in build_datasets() with real data; the docstrings give
   src.add('from torch.utils.data import DataLoader, Dataset, default_collate');
   src.blank();
   src.add(`from model import ${modelImports.join(', ')}`);
+  if (data) {
+    src.blank();
+    for (const line of data.imports) src.add(line);
+  }
   src.blank(2);
 
   // ------------------------------------------------------------- hyper-parameters
@@ -368,7 +385,8 @@ ${docLines}
   src.blank(2);
 
   const hint = realDataHint(ir);
-  src.add(`def build_datasets() -> tuple[Dataset, Dataset]:
+  if (data) src.add(`def build_datasets() -> tuple[Dataset, Dataset]:\n${data.buildDatasets}`);
+  else src.add(`def build_datasets() -> tuple[Dataset, Dataset]:
     """Return (train, val) datasets yielding (inputs, targets) dicts.${hint.length ? '\n\n    ' + hint.join('\n    ').replace(/\n {4}\n/g, '\n\n') : ''}
     """
     return SyntheticDataset(256), SyntheticDataset(64)`);

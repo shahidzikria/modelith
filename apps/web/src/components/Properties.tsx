@@ -1,3 +1,4 @@
+import { linkedPipeline, linkPipeline, pipelineOutput, useLinks } from '../studio/links';
 import { formatCount, formatShape, getBlock, kindName, requiredMultiple, suggestNext, suggestParamValues, type Analysis, type GraphNode, type ParamSpec, type Project } from '@modelith/blocks';
 import { useMemo } from 'react';
 import { useStore } from '../store';
@@ -268,8 +269,47 @@ export function Properties({ analysis }: { analysis: Analysis }) {
           );
         })}
         {!visible.length && def.isInput === undefined && <p className="text-xs text-muted">This block has no hyper-parameters.</p>}
+        {node.type === 'image_input' && <PreprocessingField nodeId={node.id} />}
       </div>
       {!def.head && <NextBlocks project={project} analysis={analysis} nodeId={node.id} />}
+    </div>
+  );
+}
+
+/** Image input → Preprocessing Studio pipeline link. */
+function PreprocessingField({ nodeId }: { nodeId: string }) {
+  const pipelines = useLinks((s) => s.pipelines);
+  const linked = linkedPipeline(pipelines, nodeId);
+  return (
+    <div className="rounded-md border border-line p-2">
+      <label htmlFor="preprocessing" className="mb-1 block text-xs font-medium">
+        Preprocessing
+      </label>
+      <select
+        id="preprocessing"
+        value={linked?.id ?? ''}
+        onChange={(e) => (e.target.value ? linkPipeline(e.target.value, nodeId) : linked && linkPipeline(linked.id, undefined))}
+        className="w-full rounded-md border border-line bg-panel-2 px-2 py-1 text-sm"
+      >
+        <option value="">None (synthetic data in train.py)</option>
+        {pipelines.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+      <p className="mt-1 text-[11px] text-muted">
+        {linked ? (
+          <>
+            Outputs <span className="font-mono">{pipelineOutput(linked)}</span>. train.py loads data through its preprocess.py / dataset.py.{' '}
+          </>
+        ) : (
+          'Link a pipeline to load real data in train.py. '
+        )}
+        <a href="#/preprocess" className="text-accent underline">
+          Open Preprocessing Studio
+        </a>
+      </p>
     </div>
   );
 }

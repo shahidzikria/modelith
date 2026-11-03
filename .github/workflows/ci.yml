@@ -40,3 +40,26 @@ jobs:
       # Every template: smoke test, UI shape/param check, 2 training steps, ONNX export.
       - run: python -m pytest tests/python -q
       - run: python -m pytest apps/verify -q
+
+  preprocessing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: npx tsc --noEmit -p packages/preprocess
+      # OpenCV.js (Node) runs every step and preset; the generated preprocess.py must match it.
+      - run: npm run gen:parity
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch==2.8.0 torchvision==0.23.0
+      - run: pip install "numpy>=2,<2.3" scikit-image PyWavelets scipy pyyaml pydantic stringzilla simsimd pytest fastapi==0.116.1 httpx python-multipart timm==1.0.30
+      # albumentations depends on opencv-python-headless; keep the contrib build (same cv2 module) installed last.
+      - run: pip install --no-deps albumentations==2.0.8 albucore==0.0.24
+      - run: pip install --force-reinstall --no-deps opencv-contrib-python-headless==4.12.0.88
+      - run: python -m pytest tests/preprocess -q
+      - run: cd apps/studio-server && python -m pytest -q

@@ -5,14 +5,18 @@
   "type": "module",
   "workspaces": [
     "apps/web",
-    "packages/blocks"
+    "packages/blocks",
+    "packages/preprocess"
   ],
   "scripts": {
     "dev": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
-    "test": "npm test -w packages/blocks",
+    "test": "npm test -w packages/blocks && npm test -w packages/preprocess",
     "gen:fixtures": "npx tsx tests/generate-fixtures.ts",
-    "test:py": "python -m pytest tests/python -q"
+    "test:py": "python -m pytest tests/python -q",
+    "gen:parity": "npx tsx tests/preprocess/gen-parity.ts && npx tsx tests/preprocess/gen-integration.ts",
+    "test:preprocess": "python -m pytest tests/preprocess apps/studio-server -q",
+    "studio-server": "cd apps/studio-server && uvicorn main:app --port 8001"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",

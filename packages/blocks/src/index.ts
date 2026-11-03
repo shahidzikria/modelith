@@ -16,7 +16,8 @@ export {
   type Suggestion,
 } from './graph/recommend';
 export { buildIR, CodegenError, type IR, type IRNode } from './codegen/ir';
-export { generateProject, PINNED, type GeneratedProject } from './codegen/project';
+export { generateProject, PINNED, type GeneratedProject, type ProjectOptions } from './codegen/project';
+export type { DataHook } from './codegen/torchTrain';
 export type { GeneratedFile } from './codegen/source';
 export { templates, getTemplate, type Template } from './templates/index';
 export { GraphBuilder } from './templates/builder';

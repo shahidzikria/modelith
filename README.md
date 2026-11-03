@@ -26,12 +26,13 @@ mistakes. When the graph is ready, it generates a complete, runnable project: `m
 2. [Install and run](#install-and-run)
 3. [Using Modelith](#using-modelith)
 4. [Running the generated code](#running-the-generated-code)
-5. [Verify service (optional)](#verify-service-optional)
-6. [Tests](#tests)
-7. [Project structure](#project-structure)
-8. [Adding a block](#adding-a-block)
-9. [Status and limitations](#status-and-limitations)
-10. [License](#license)
+5. [Preprocessing Studio](#preprocessing-studio)
+6. [Verify service (optional)](#verify-service-optional)
+7. [Tests](#tests)
+8. [Project structure](#project-structure)
+9. [Adding a block](#adding-a-block)
+10. [Status and limitations](#status-and-limitations)
+11. [License](#license)
 
 ---
 
@@ -254,6 +255,119 @@ and **TFLite**.
 
 ---
 
+## Preprocessing Studio
+
+Open it with **Preprocessing** in the top bar (or `/#/preprocess`). Build an ordered pipeline of image
+preprocessing steps, see the result of every step live, and export runnable Python.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│ name · Pipelines ▾ · Presets ▾ · ↶ ↷ · Seed 🎲 · Inference|Train · Link to model ▾ ·       │
+│ Samples ▾ · Batch · + Variant B · Export code ▸                                            │
+├──────────────┬──────────────────────────────────────────────┬────────────────────────────┤
+│ Step library │ Viewer: Output · Before/after · Side by side │ Pipeline (drag ⋮⋮ to       │
+│ (120 steps,  │ · Difference · Step grid; mask / box /       │ reorder, Alt+↑/↓)          │
+│ 12 categories│ keypoint / grid overlays; pixel inspector    │ ───────────────────────────│
+│ searchable)  │ Filmstrip (one thumbnail per step)           │ Step inspector · Code      │
+│              │ Histogram & stats · Quality · Timing         │                            │
+└──────────────┴──────────────────────────────────────────────┴────────────────────────────┘
+```
+
+### Building a pipeline
+
+- **Add a step:** click it in the library to append, or drag it onto a pipeline row to insert it before that row
+  (onto **+ add step** to append).
+- **Reorder:** drag the ⋮⋮ handle, or focus a row and press <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd>. Every row
+  shows the parameter summary, an on/off box, the shape and dtype after the step, its time, and ⚠ / ⛔ when there
+  is a problem.
+- **Parameters:** sliders with number boxes (odd-only kernel sizes, linked W × H with 🔒, colour pickers, a matrix
+  editor for custom kernels), ↺ to reset one parameter. While a slider moves, the preview runs on a 512 px proxy
+  and one undo step is recorded. Rectangles, perspective corners, spectrum notches and inRange colours are edited
+  directly on the image (**▭ draw**, **✥ edit on image**, **💧 pick**).
+- **Train / Inference:** every step applies in *Both*, *Train only* or *Inference only*; augmentations default to
+  train only. The top bar previews either pipeline. Random steps use the pipeline **seed** and show
+  **🎲 Show 9 samples**.
+- **Validation:** wrong channels / dtype ("CLAHE needs uint8 or uint16; this image is float32 after
+  'Standardise'"), even kernels, Canny low > high, order advice (normalisation not at the end, two resizes in a
+  row, heavy filters before a shrinking resize, conversions that are undone) and model compatibility each come
+  with one-click fixes.
+- **Compare orders:** **+ Variant B** duplicates the pipeline; reorder B and the viewer shows A, B and |A − B|.
+- **Samples:** *Samples ▸ Load images…* (← / → to switch), attach a label mask PNG or boxes (YOLO `.txt`, COCO
+  JSON or `{"boxes": [[x1, y1, x2, y2, cls]]}`). Overlays always show the targets after the geometric steps.
+  **Batch** processes a folder, several files or a `.zip` and downloads the outputs.
+- **Extras:** suggestions for the loaded image (Read image row), parameter sweeps, mean / std from the loaded
+  samples (Standardise), quality metrics (PSNR, SSIM, entropy, sharpness), versions with a step-level diff
+  (Pipelines ▸ Versions…), batch-augmentation previews (MixUp, CutMix, Mosaic).
+- **Presets:** ImageNet classification, ImageNet training augmentation, YOLO detection, semantic segmentation,
+  document OCR cleanup, document tamper forensics, monocular depth, medical CT / X-ray, low-light enhancement,
+  satellite / aerial.
+
+Pipelines autosave in the browser, travel inside `.modelith.json` exports and can be exported / imported as
+`.pipeline.json` (Pipelines ▾).
+
+### Exported code
+
+**Export code ▸** shows (and **Download ZIP** downloads):
+
+| File | Contents |
+|---|---|
+| `preprocess.py` | Pure `cv2` + NumPy. Named constants at the top, one documented function per step (`def step_03_clahe(img):`, with shapes and colour order), `preprocess(img, mask=None, boxes=None, keypoints=None, train=False, rng=None)`, `postprocess_boxes / _mask / _keypoints` that undo letterbox, resize, crop, pad, flips, rotations and warps, and a CLI: `python preprocess.py input_dir output_dir [--train] [--seed N] [--save-steps] [--npy]` |
+| `transforms_albumentations.py` | `A.Compose([...], bbox_params=..., keypoint_params=...)`; steps without an equivalent call the `preprocess.py` function |
+| `transforms_torchvision.py` / `transforms_tf.py` | `torchvision.transforms.v2` (tv_tensors) and `tf.data` versions |
+| `dataset.py` | PyTorch datasets for class folders, segmentation mask folders, YOLO txt and COCO, plus batch-level MixUp / CutMix / Mosaic |
+| `pipeline.json` | The pipeline, for re-import |
+
+Randomness uses one `np.random.Generator(np.random.PCG64(seed))`. The browser implements the same generator, so
+a seeded augmentation in the preview is the same augmentation the exported code produces.
+
+### Linking to a model
+
+Choose **Link to model ▾** in the studio, or **Preprocessing** on a model's Image block. The block then shows a
+🔗 badge with the pipeline's output shape, the studio checks that the output matches the model's input (with fixes:
+*Add Resize/Letterbox to H×W* or *Update model input to match*) and suggests ImageNet mean / std for pretrained
+backbones. **Generate code** then adds the preprocessing files to the project, and `train.py` loads `data/train`
+and `data/val` through `dataset.py` (train pipeline for training, inference pipeline for validation). Without a
+`data/` folder it falls back to the synthetic data.
+
+### Where steps run
+
+Steps run in the browser with OpenCV.js 4.12 (in a Web Worker). Steps that OpenCV.js does not have (non-local
+means, `detailEnhance`, `xphoto` / `ximgproc`, JPEG encoding, DCT, scikit-image denoisers, Albumentations
+weather) are marked **server**: from that step on, the pipeline runs on the Python server, which executes the
+generated `preprocess.py` itself.
+
+```bash
+cd apps/studio-server
+pip install -r requirements.txt
+pip install --force-reinstall --no-deps opencv-contrib-python-headless==4.12.0.88   # albumentations pulls the non-contrib build
+uvicorn main:app --port 8001
+```
+
+The server also decodes 16-bit PNG / TIFF exactly and times the exported code (**Measure on server**). Set
+`VITE_STUDIO_URL` to use another address. Like the verify service it executes submitted code, so run it only on
+your own machine or in its container (`apps/studio-server/Dockerfile`).
+
+### Adding a step
+
+Create one file in `packages/preprocess/src/steps/<category>/` and run
+`node packages/preprocess/scripts/gen-steps-index.mjs`:
+
+```ts
+defineStep({
+  id: 'my_step', category: 'Filtering', label: 'My step', doc: 'What it does and when to use it.',
+  cv2: 'cv2.myCall(img, k)', params: [oddInt('k', 'Kernel size', 5)],
+  engine: 'both', kind: 'deterministic', affectsGeometry: false, accepts: { dtype: ['uint8'] },
+  outMeta: (m) => m,
+  applyBrowser: (src, p, ctx) => { const dst = ctx.mat(); ctx.cv.medianBlur(src, dst, p.k); return dst; },
+  emitPython: (p, ctx) => ({ body: `img = cv2.medianBlur(img, ${ctx.c('ksize', p.k)})` }),
+  testCases: [{}, { input: 'gray', params: { k: 3 } }],
+});
+```
+
+Then run `npm run gen:parity && npm run test:preprocess`. The test cases run in OpenCV.js and in the generated
+Python, and must match. Note: in the OpenCV.js 4.12 build `Mat.clone()` shares pixel data with the original; use
+`copyMat()` from `steps/util.ts` instead.
+
 ## Verify service (optional)
 
 A small FastAPI service runs the generated `model.py` for real and reports the true output shapes and
@@ -276,10 +390,11 @@ internet.
 
 | Command | What it checks |
 |---|---|
-| `npm test` | Vitest: shape formulas, validation, recommendations, generated-code snapshots for every template × framework |
+| `npm test` | Vitest: shape formulas, validation, recommendations, generated-code snapshots for every template × framework; preprocessing registry, NumPy-identical RNG, pipeline.json migration, validation messages, preset code snapshots |
 | `npm run gen:fixtures -- --no-pretrained` then `npm run test:py` | Executes every template's generated PyTorch code: forward pass, shapes and parameters match the UI (±3%), two training steps, checkpoint and ONNX export |
 | `python -m pytest apps/verify` | Verify service |
-| `npx playwright install chromium` then `npx playwright test` | Browser tests: templates, click-to-append, drag-and-connect, refused connections, parameter edits, suggestions, delete, reset, undo/redo, code copy, 390 px phone layout |
+| `npm run gen:parity` then `npm run test:preprocess` | Preprocessing: every step case and every preset (train and inference) run in OpenCV.js and in the generated `preprocess.py` and must match (exactly for deterministic uint8 steps, within each step's stated tolerance otherwise, including seeded augmentations); the CLI, Albumentations, torchvision and `dataset.py` exports run; mask / box / keypoint round trips through `postprocess_*` (IoU ≥ 0.99); linked models train 2 steps on real files; studio server |
+| `npx playwright install chromium` then `npx playwright test` | Browser tests: templates, click-to-append, drag-and-connect, refused connections, parameter edits, suggestions, delete, reset, undo/redo, code copy, 390 px phone layout; Preprocessing Studio: library click / drag, mouse and keyboard reordering, validation fixes, parameter edits, presets, 9 samples, variant B, model linking, 768 px layout |
 
 To reuse an existing Chromium for Playwright, set `PW_CHROME` to its executable path. CI
 (`.github/workflows/ci.yml`) runs all of the above on every push.
@@ -298,9 +413,16 @@ packages/blocks        Single source of truth (pure TypeScript, no React)
   src/graph/recommend.ts Shape previews, next-layer and parameter suggestions
   src/codegen/           Graph → model.py / train.py (PyTorch, Keras), config, requirements, README
   src/templates/         The 21 ready-made graphs
-apps/web               React 18 + Vite + React Flow + Zustand + Monaco + Tailwind UI
+packages/preprocess    Preprocessing Studio core (pure TypeScript, no React)
+  src/steps/<category>/  One file per step: params, docs, meta, validation, OpenCV.js + Python emitters
+  src/analyze.ts         Shape / dtype / colour-space propagation, validation and fixes
+  src/runtime/           OpenCV.js runner, Targets (masks / boxes / keypoints), NumPy-compatible PCG64
+  src/codegen/           preprocess.py, Albumentations, torchvision, tf.data, dataset.py, train.py hook
+  src/presets.ts         The 10 ready-made pipelines
+apps/web               React 18 + Vite + React Flow + Zustand + Monaco + Tailwind UI (src/studio: Preprocessing Studio)
 apps/verify            FastAPI service that runs generated code and reports real shapes
-tests/                 Fixture generator, pytest (executes generated code), Playwright tests
+apps/studio-server     FastAPI service that runs the generated preprocess.py (server-only steps, 16-bit decoding)
+tests/                 Fixture generators, pytest (executes generated code), Playwright tests
 ```
 
 Pipeline: `graph → analyze (validate, sort, infer shapes) → drop unused blocks → IR → emitter → files`.
@@ -335,7 +457,13 @@ See [PLAN.md](PLAN.md) for milestones.
 - **FLOPs are estimates** (YOLOv8-s: ~42 GFLOPs predicted vs 28.6 reported). Parameter counts are checked
   against the real models (±3%).
 - Not built yet: grouping blocks into reusable custom blocks, an AI assistant, importing existing PyTorch/ONNX
-  models, hyper-parameter sweep export, version history and share links.
+  models, hyper-parameter sweep export, version history (of models) and share links.
+- **Preprocessing Studio:** `transforms_tf.py` is generated but not executed in CI (no TensorFlow). In the
+  Albumentations / torchvision / tf versions, steps without a native equivalent that move pixels (deskew,
+  rectification, …) transform the image only; use `preprocess.preprocess()` when masks and boxes must follow.
+  OpenCV.js and native cv2 round HSV/HLS → BGR, separable filters and some box filters differently by ±1; those
+  steps state a tolerance. Elastic / grid / optical distortions and undistortion cannot be undone by
+  `postprocess_*`. The AI pipeline assistant (§12.4 of the brief) is not built.
 
 ## License
 

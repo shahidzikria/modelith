@@ -1,5 +1,7 @@
 import Editor, { type OnMount } from '@monaco-editor/react';
-import { CodegenError, generateProject, type GeneratedFile, type Project } from '@modelith/blocks';
+import { CodegenError, generateProject, type GeneratedFile, type Project, type ProjectOptions } from '@modelith/blocks';
+import type { Pipeline } from '@modelith/preprocess';
+import { projectPreprocessing, useLinks } from '../studio/links';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import '../monaco';
 import { useStore } from '../store';
@@ -20,9 +22,9 @@ function useResolvedDark(): boolean {
   return theme === 'dark' || (theme === 'system' && sysDark);
 }
 
-export function generate(project: Project): { files?: GeneratedFile[]; errors?: string[] } {
+export function generate(project: Project, pipelines: Pipeline[] = []): { files?: GeneratedFile[]; errors?: string[] } {
   try {
-    return { files: generateProject(project).files };
+    return { files: generateProject(project, { preprocessing: projectPreprocessing(project, pipelines) as ProjectOptions['preprocessing'] }).files };
   } catch (err) {
     if (err instanceof CodegenError) return { errors: err.issues };
     return { errors: [(err as Error).message] };
@@ -47,7 +49,8 @@ export default function CodeView() {
     const t = setTimeout(() => setDebounced(project), 150);
     return () => clearTimeout(t);
   }, [project]);
-  const result = useMemo(() => generate(debounced), [debounced]);
+  const pipelines = useLinks((s) => s.pipelines);
+  const result = useMemo(() => generate(debounced, pipelines), [debounced, pipelines]);
   const file = result.files?.find((f) => f.path === active) ?? result.files?.[0];
   const lineMapRef = useRef<Record<number, string>>({});
   lineMapRef.current = file?.lineMap ?? {};
